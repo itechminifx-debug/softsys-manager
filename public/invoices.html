@@ -74,24 +74,33 @@
         let clients = [];
         
         // ========== UPDATE YOUR COMPANY DETAILS HERE ==========
-        const COMPANY_NAME = "SoftSys Solutions";
-        const COMPANY_ADDRESS = "123 Business Street, Accra - Ghana";
-        const COMPANY_EMAIL = "info@softsys.com";
-        const COMPANY_PHONE = "+233 XX XXX XXXX";
+        const COMPANY_NAME = "iTECH-SOFT SYSTEM SOLUTIONS";
+        const COMPANY_ADDRESS = "Oti - Region - Jasikan;
+        const COMPANY_EMAIL = "itechminifx@gmail.com";
+        const COMPANY_PHONE = "+233 59 190 6224";
         const COMPANY_WEBSITE = "www.softsys.com";
         // ======================================================
         
+        // LOAD CLIENTS FROM DATABASE
         async function loadClients() {
-            const res = await fetch(API_URL + '/api/clients');
-            clients = await res.json();
+            try {
+                const res = await fetch(API_URL + '/api/clients');
+                clients = await res.json();
+            } catch (error) {
+                console.error('Error loading clients:', error);
+            }
         }
         
+        // LOAD INVOICES FROM DATABASE
         async function loadInvoices() {
             try {
                 const res = await fetch(API_URL + '/api/invoices');
                 invoices = await res.json();
                 renderTable();
-            } catch (error) { console.error('Error:', error); }
+            } catch (error) { 
+                console.error('Error loading invoices:', error);
+                document.getElementById('invoicesTable').innerHTML = '<p style="text-align:center; padding:40px;">Error loading invoices. Please refresh.</p>';
+            }
         }
         
         function getStatusBadge(status) {
@@ -105,16 +114,16 @@
                 container.innerHTML = '<p style="text-align:center; padding:40px;">No invoices yet. Click "Create Invoice" to get started.</p>';
                 return;
             }
-            let html = '<table><thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Actions</th></td></thead><tbody>';
+            let html = '<table><thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Actions</th></tr></thead><tbody>';
             invoices.forEach(i => {
                 const client = clients.find(c => c.id == i.client_id);
                 html += `
                     <tr>
                         <td>${i.invoice_number}</td>
-                        <td>${client ? client.name : '-'}</td>
-                        <td>₵${i.amount}</td>
-                        <td>${getStatusBadge(i.status)}</td>
-                        <td>${i.due_date || '-'}</td>
+                        <td>${client ? client.name : 'Unknown Client'}</td>
+                        <td>₵${parseFloat(i.amount).toFixed(2)}</span></td>
+                        <td>${getStatusBadge(i.status)}</span></td>
+                        <td>${i.due_date || '-'}</span></td>
                         <td>
                             <button class="btn btn-print" onclick="printInvoice(${i.id})">🖨️ Print</button>
                             <button class="btn btn-success" onclick="markAsPaid(${i.id})" ${i.status === 'paid' ? 'disabled' : ''}>Mark Paid</button>
@@ -123,7 +132,7 @@
                     </tr>
                 `;
             });
-            html += '</tbody></table>';
+            html += '</tbody></tr>';
             container.innerHTML = html;
         }
         
@@ -144,7 +153,7 @@
             document.getElementById('invoiceModal').style.display = 'flex';
         }
         
-        // PRINT INVOICE FUNCTION
+        // PRINT INVOICE FUNCTION - LOADS DATA FROM DATABASE
         function printInvoice(id) {
             const invoice = invoices.find(i => i.id === id);
             const client = clients.find(c => c.id == invoice.client_id);
@@ -240,10 +249,10 @@
                 <body>
                     <div class="invoice-container">
                         <div class="invoice-header">
-                            <h1>${iTECH-SOFT SYSTEMS SOLUTIONS}</h1>
+                            <h1>${COMPANY_NAME}</h1>
                             <div class="company-details">
-                                <p>${Oti Region - Jasikan}</p>
-                                <p>📧 ${itechminifx@gmail.com} | 📞 ${+233 (0) 591906224} | 🌐 ${www.softsolutions.com}</p>
+                                <p>${COMPANY_ADDRESS}</p>
+                                <p>📧 ${COMPANY_EMAIL} | 📞 ${COMPANY_PHONE} | 🌐 ${COMPANY_WEBSITE}</p>
                             </div>
                         </div>
                         
@@ -276,15 +285,15 @@
                             <tbody>
                                 <tr>
                                     <td>Professional Services - ${invoice.invoice_number}</td>
-                                    <td>1</td>
-                                    <td>₵${invoice.amount}</td>
-                                    <td>₵${invoice.amount}</td>
+                                    <td>1</span></td>
+                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</span></span></td>
+                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</span></span></span></td>
                                 </tr>
                             </tbody>
                         </table>
                         
                         <div class="invoice-total">
-                            <h3>Total Amount: ₵${invoice.amount}</h3>
+                            <h3>Total Amount: ₵${parseFloat(invoice.amount).toFixed(2)}</h3>
                         </div>
                         
                         <div class="invoice-footer">
@@ -305,60 +314,95 @@
             printWindow.document.close();
         }
         
+        // MARK INVOICE AS PAID - UPDATES DATABASE
         async function markAsPaid(id) {
             if (confirm('Mark this invoice as paid?')) {
-                await fetch(API_URL + `/api/invoices/${id}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }) 
-                });
-                loadInvoices();
+                try {
+                    await fetch(API_URL + `/api/invoices/${id}`, { 
+                        method: 'PUT', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }) 
+                    });
+                    loadInvoices(); // Reload from database
+                    showMessage('Invoice marked as paid!');
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to update invoice');
+                }
             }
         }
         
+        // SAVE INVOICE TO DATABASE
         async function saveInvoice() {
             const id = document.getElementById('invoiceId').value;
             const invoiceData = {
                 client_id: document.getElementById('invoiceClientId').value,
                 invoice_number: document.getElementById('invoiceNumber').value,
-                amount: document.getElementById('invoiceAmount').value,
+                amount: parseFloat(document.getElementById('invoiceAmount').value),
                 status: document.getElementById('invoiceStatus').value,
                 due_date: document.getElementById('invoiceDueDate').value
             };
+            
             if (!invoiceData.client_id || !invoiceData.invoice_number || !invoiceData.amount) { 
                 alert('Please fill all required fields'); 
                 return; 
             }
+            
             try {
                 let res;
                 if (id) {
+                    // UPDATE existing invoice
                     res = await fetch(API_URL + `/api/invoices/${id}`, { 
                         method: 'PUT', 
                         headers: { 'Content-Type': 'application/json' }, 
                         body: JSON.stringify(invoiceData) 
                     });
                 } else {
+                    // CREATE new invoice
                     res = await fetch(API_URL + '/api/invoices', { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
                         body: JSON.stringify(invoiceData) 
                     });
                 }
-                if (res.ok) { closeModal(); loadInvoices(); }
-            } catch (error) { console.error('Error:', error); }
+                if (res.ok) { 
+                    closeModal(); 
+                    loadInvoices(); // Refresh the table from database
+                    showMessage(id ? 'Invoice updated!' : 'Invoice created!');
+                }
+            } catch (error) { 
+                console.error('Error:', error);
+                alert('Failed to save invoice');
+            }
         }
         
+        // DELETE INVOICE FROM DATABASE
         async function deleteInvoice(id) {
             if (confirm('Delete this invoice?')) {
-                await fetch(API_URL + `/api/invoices/${id}`, { method: 'DELETE' });
-                loadInvoices();
+                try {
+                    await fetch(API_URL + `/api/invoices/${id}`, { method: 'DELETE' });
+                    loadInvoices(); // Reload from database
+                    showMessage('Invoice deleted!');
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to delete invoice');
+                }
             }
+        }
+        
+        function showMessage(msg) {
+            alert(msg);
         }
         
         function closeModal() { document.getElementById('invoiceModal').style.display = 'none'; }
         
-        loadClients();
-        loadInvoices();
+        // Initialize - LOAD ALL DATA FROM DATABASE
+        async function init() {
+            await loadClients();
+            await loadInvoices();
+        }
+        
+        init();
     </script>
 </body>
 </html>
