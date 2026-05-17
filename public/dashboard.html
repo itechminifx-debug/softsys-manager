@@ -130,7 +130,6 @@
     </style>
 </head>
 <body>
-    <script src="config.js"></script>
     <div class="header">
         <div class="logo">SoftSys<span>Solutions</span></div>
         <div class="nav">
@@ -173,10 +172,11 @@
         </div>
     </div>
     
+    <script src="config.js"></script>
     <script>
         async function loadStats() {
             try {
-                const res = await fetch('/api/dashboard/stats');
+                const res = await fetch(API_URL + '/api/dashboard/stats');
                 const data = await res.json();
                 
                 document.getElementById('totalClients').innerText = data.totalClients || 0;
@@ -190,7 +190,7 @@
         
         async function loadRecentClients() {
             try {
-                const res = await fetch('/api/clients');
+                const res = await fetch(API_URL + '/api/clients');
                 const clients = await res.json();
                 const recent = clients.slice(0, 5);
                 
@@ -199,7 +199,7 @@
                     return;
                 }
                 
-                let html = '<tr><thead><td><th>Name</th><th>Email</th><th>Company</th></tr></thead><tbody>';
+                let html = '<tr><thead><tr><th>Name</th><th>Email</th><th>Company</th></tr></thead><tbody>';
                 recent.forEach(c => {
                     html += `<tr><td>${c.name}</td><td>${c.email || '-'}</td><td>${c.company || '-'}</td></tr>`;
                 });
