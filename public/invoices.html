@@ -32,7 +32,7 @@
         .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-paid { background: #d1fae5; color: #065f46; }
         .badge-unpaid { background: #fee2e2; color: #991b1b; }
-        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; }
         @media (max-width: 768px) { .header { flex-direction: column; text-align: center; } table { font-size: 12px; } }
     </style>
 </head>
@@ -51,7 +51,7 @@
     <div class="container">
         <div class="card">
             <h2>🧾 Invoices <button class="btn" onclick="openAddModal()">+ Create Invoice</button></h2>
-            <div id="invoicesTable"></div>
+            <div id="invoicesTable">Loading invoices...</div>
         </div>
     </div>
     
@@ -61,33 +61,51 @@
             <input type="hidden" id="invoiceId">
             <div class="form-group"><label>Client</label><select id="invoiceClientId"></select></div>
             <div class="form-group"><label>Invoice Number</label><input type="text" id="invoiceNumber" placeholder="INV-001"></div>
-            <div class="form-group"><label>Amount (₵)</label><input type="number" id="invoiceAmount" placeholder="0.00"></div>
+            <div class="form-group"><label>Amount (₵)</label><input type="number" id="invoiceAmount" placeholder="0.00" step="0.01"></div>
             <div class="form-group"><label>Status</label><select id="invoiceStatus"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
             <div class="form-group"><label>Due Date</label><input type="date" id="invoiceDueDate"></div>
             <div class="modal-buttons"><button class="btn" onclick="saveInvoice()">Save</button><button class="btn btn-danger" onclick="closeModal()">Cancel</button></div>
         </div>
     </div>
     
-    <script src="config.js"></script>
+    <div id="toast" class="toast"></div>
+
     <script>
+        // API URL - uses current domain
+        const API_URL = '';
+        
         let invoices = [];
         let clients = [];
         
         // ========== UPDATE YOUR COMPANY DETAILS HERE ==========
-        const COMPANY_NAME = "iTECH-SOFT SYSTEM SOLUTIONS";
-        const COMPANY_ADDRESS = "Oti - Region - Jasikan;
-        const COMPANY_EMAIL = "itechminifx@gmail.com";
-        const COMPANY_PHONE = "+233 59 190 6224";
+        const COMPANY_NAME = "SoftSys Solutions";
+        const COMPANY_ADDRESS = "123 Business Street, Accra - Ghana";
+        const COMPANY_EMAIL = "info@softsys.com";
+        const COMPANY_PHONE = "+233 XX XXX XXXX";
         const COMPANY_WEBSITE = "www.softsys.com";
         // ======================================================
+        
+        // Show toast message
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#ef4444' : '#10b981';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
         
         // LOAD CLIENTS FROM DATABASE
         async function loadClients() {
             try {
                 const res = await fetch(API_URL + '/api/clients');
+                if (!res.ok) throw new Error('Failed to load clients');
                 clients = await res.json();
+                console.log('Clients loaded:', clients.length);
             } catch (error) {
                 console.error('Error loading clients:', error);
+                showToast('Error loading clients', true);
             }
         }
         
@@ -95,7 +113,9 @@
         async function loadInvoices() {
             try {
                 const res = await fetch(API_URL + '/api/invoices');
+                if (!res.ok) throw new Error('Failed to load invoices');
                 invoices = await res.json();
+                console.log('Invoices loaded:', invoices.length);
                 renderTable();
             } catch (error) { 
                 console.error('Error loading invoices:', error);
@@ -119,11 +139,11 @@
                 const client = clients.find(c => c.id == i.client_id);
                 html += `
                     <tr>
-                        <td>${i.invoice_number}</td>
+                        <td><strong>${i.invoice_number}</strong></td>
                         <td>${client ? client.name : 'Unknown Client'}</td>
-                        <td>₵${parseFloat(i.amount).toFixed(2)}</span></td>
-                        <td>${getStatusBadge(i.status)}</span></td>
-                        <td>${i.due_date || '-'}</span></td>
+                        <td>₵${parseFloat(i.amount).toFixed(2)}</td>
+                        <td>${getStatusBadge(i.status)}</td>
+                        <td>${i.due_date || '-'}</td>
                         <td>
                             <button class="btn btn-print" onclick="printInvoice(${i.id})">🖨️ Print</button>
                             <button class="btn btn-success" onclick="markAsPaid(${i.id})" ${i.status === 'paid' ? 'disabled' : ''}>Mark Paid</button>
@@ -132,7 +152,7 @@
                     </tr>
                 `;
             });
-            html += '</tbody></tr>';
+            html += '</tbody><table>';
             container.innerHTML = html;
         }
         
@@ -153,7 +173,22 @@
             document.getElementById('invoiceModal').style.display = 'flex';
         }
         
-        // PRINT INVOICE FUNCTION - LOADS DATA FROM DATABASE
+        function editInvoice(id) {
+            const invoice = invoices.find(i => i.id === id);
+            if (!invoice) return;
+            const client = clients.find(c => c.id == invoice.client_id);
+            document.getElementById('modalTitle').innerText = 'Edit Invoice';
+            document.getElementById('invoiceId').value = invoice.id;
+            document.getElementById('invoiceNumber').value = invoice.invoice_number;
+            document.getElementById('invoiceAmount').value = invoice.amount;
+            document.getElementById('invoiceStatus').value = invoice.status;
+            document.getElementById('invoiceDueDate').value = invoice.due_date || '';
+            loadClientSelect();
+            document.getElementById('invoiceClientId').value = invoice.client_id;
+            document.getElementById('invoiceModal').style.display = 'flex';
+        }
+        
+        // PRINT INVOICE FUNCTION
         function printInvoice(id) {
             const invoice = invoices.find(i => i.id === id);
             const client = clients.find(c => c.id == invoice.client_id);
@@ -170,80 +205,21 @@
                 <head>
                     <title>Invoice ${invoice.invoice_number}</title>
                     <style>
-                        body {
-                            font-family: 'Times New Roman', serif;
-                            margin: 0;
-                            padding: 40px;
-                        }
-                        .invoice-container {
-                            max-width: 800px;
-                            margin: 0 auto;
-                            background: white;
-                        }
-                        .invoice-header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                            padding-bottom: 20px;
-                            border-bottom: 2px solid #6366f1;
-                        }
-                        .invoice-header h1 {
-                            font-size: 32px;
-                            color: #6366f1;
-                            margin-bottom: 10px;
-                        }
-                        .invoice-header .company-details {
-                            color: #64748b;
-                            font-size: 14px;
-                            line-height: 1.5;
-                        }
-                        .invoice-details {
-                            display: flex;
-                            justify-content: space-between;
-                            margin-bottom: 30px;
-                        }
-                        .invoice-bill-to h4, .invoice-info h4 {
-                            margin-bottom: 10px;
-                            color: #1e293b;
-                        }
-                        .invoice-bill-to p, .invoice-info p {
-                            margin: 5px 0;
-                            color: #475569;
-                        }
-                        .invoice-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin: 20px 0;
-                        }
-                        .invoice-table th {
-                            background: #f8fafc;
-                            padding: 12px;
-                            text-align: left;
-                            border-bottom: 2px solid #e2e8f0;
-                        }
-                        .invoice-table td {
-                            padding: 12px;
-                            border-bottom: 1px solid #e2e8f0;
-                        }
-                        .invoice-total {
-                            text-align: right;
-                            margin-top: 20px;
-                            padding-top: 20px;
-                            border-top: 2px solid #e2e8f0;
-                        }
-                        .invoice-total h3 {
-                            color: #1e293b;
-                        }
-                        .invoice-footer {
-                            text-align: center;
-                            margin-top: 40px;
-                            padding-top: 20px;
-                            border-top: 1px solid #e2e8f0;
-                            font-size: 12px;
-                            color: #64748b;
-                        }
-                        @media print {
-                            body { padding: 0; }
-                        }
+                        body { font-family: 'Times New Roman', serif; margin: 0; padding: 40px; }
+                        .invoice-container { max-width: 800px; margin: 0 auto; background: white; }
+                        .invoice-header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #6366f1; }
+                        .invoice-header h1 { font-size: 32px; color: #6366f1; margin-bottom: 10px; }
+                        .invoice-header .company-details { color: #64748b; font-size: 14px; line-height: 1.5; }
+                        .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; }
+                        .invoice-bill-to h4, .invoice-info h4 { margin-bottom: 10px; color: #1e293b; }
+                        .invoice-bill-to p, .invoice-info p { margin: 5px 0; color: #475569; }
+                        .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        .invoice-table th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+                        .invoice-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+                        .invoice-total { text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0; }
+                        .invoice-total h3 { color: #1e293b; }
+                        .invoice-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; }
+                        @media print { body { padding: 0; } }
                     </style>
                 </head>
                 <body>
@@ -255,7 +231,6 @@
                                 <p>📧 ${COMPANY_EMAIL} | 📞 ${COMPANY_PHONE} | 🌐 ${COMPANY_WEBSITE}</p>
                             </div>
                         </div>
-                        
                         <div class="invoice-details">
                             <div class="invoice-bill-to">
                                 <h4>Bill To:</h4>
@@ -272,33 +247,23 @@
                                 <p><strong>Status:</strong> ${invoice.status === 'paid' ? 'PAID' : 'PENDING'}</p>
                             </div>
                         </div>
-                        
                         <table class="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Quantity</th>
-                                    <th>Unit Price</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr></thead>
                             <tbody>
                                 <tr>
                                     <td>Professional Services - ${invoice.invoice_number}</td>
-                                    <td>1</span></td>
-                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</span></span></td>
-                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</span></span></span></td>
+                                    <td>1</td>
+                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</td>
+                                    <td>₵${parseFloat(invoice.amount).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
-                        
                         <div class="invoice-total">
                             <h3>Total Amount: ₵${parseFloat(invoice.amount).toFixed(2)}</h3>
                         </div>
-                        
                         <div class="invoice-footer">
                             <p>Thank you for your business!</p>
-                            <p>Payment Terms: Please pay within 30 days. For inquiries, contact accounts@softsys.com</p>
+                            <p>Payment Terms: Please pay within 30 days.</p>
                         </div>
                     </div>
                     <script>
@@ -314,20 +279,24 @@
             printWindow.document.close();
         }
         
-        // MARK INVOICE AS PAID - UPDATES DATABASE
+        // MARK INVOICE AS PAID
         async function markAsPaid(id) {
             if (confirm('Mark this invoice as paid?')) {
                 try {
-                    await fetch(API_URL + `/api/invoices/${id}`, { 
+                    const res = await fetch(API_URL + `/api/invoices/${id}`, { 
                         method: 'PUT', 
                         headers: { 'Content-Type': 'application/json' }, 
                         body: JSON.stringify({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }) 
                     });
-                    loadInvoices(); // Reload from database
-                    showMessage('Invoice marked as paid!');
+                    if (res.ok) {
+                        await loadInvoices();
+                        showToast('Invoice marked as paid!');
+                    } else {
+                        throw new Error('Failed to update');
+                    }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('Failed to update invoice');
+                    showToast('Failed to update invoice', true);
                 }
             }
         }
@@ -336,14 +305,14 @@
         async function saveInvoice() {
             const id = document.getElementById('invoiceId').value;
             const invoiceData = {
-                client_id: document.getElementById('invoiceClientId').value,
+                client_id: parseInt(document.getElementById('invoiceClientId').value),
                 invoice_number: document.getElementById('invoiceNumber').value,
                 amount: parseFloat(document.getElementById('invoiceAmount').value),
                 status: document.getElementById('invoiceStatus').value,
                 due_date: document.getElementById('invoiceDueDate').value
             };
             
-            if (!invoiceData.client_id || !invoiceData.invoice_number || !invoiceData.amount) { 
+            if (!invoiceData.client_id || !invoiceData.invoice_number || isNaN(invoiceData.amount)) { 
                 alert('Please fill all required fields'); 
                 return; 
             }
@@ -351,14 +320,12 @@
             try {
                 let res;
                 if (id) {
-                    // UPDATE existing invoice
                     res = await fetch(API_URL + `/api/invoices/${id}`, { 
                         method: 'PUT', 
                         headers: { 'Content-Type': 'application/json' }, 
                         body: JSON.stringify(invoiceData) 
                     });
                 } else {
-                    // CREATE new invoice
                     res = await fetch(API_URL + '/api/invoices', { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
@@ -367,8 +334,10 @@
                 }
                 if (res.ok) { 
                     closeModal(); 
-                    loadInvoices(); // Refresh the table from database
-                    showMessage(id ? 'Invoice updated!' : 'Invoice created!');
+                    await loadInvoices();
+                    showToast(id ? 'Invoice updated!' : 'Invoice created!');
+                } else {
+                    throw new Error('Save failed');
                 }
             } catch (error) { 
                 console.error('Error:', error);
@@ -376,13 +345,17 @@
             }
         }
         
-        // DELETE INVOICE FROM DATABASE
+        // DELETE INVOICE
         async function deleteInvoice(id) {
             if (confirm('Delete this invoice?')) {
                 try {
-                    await fetch(API_URL + `/api/invoices/${id}`, { method: 'DELETE' });
-                    loadInvoices(); // Reload from database
-                    showMessage('Invoice deleted!');
+                    const res = await fetch(API_URL + `/api/invoices/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        await loadInvoices();
+                        showToast('Invoice deleted!');
+                    } else {
+                        throw new Error('Delete failed');
+                    }
                 } catch (error) {
                     console.error('Error:', error);
                     alert('Failed to delete invoice');
@@ -390,13 +363,11 @@
             }
         }
         
-        function showMessage(msg) {
-            alert(msg);
+        function closeModal() { 
+            document.getElementById('invoiceModal').style.display = 'none'; 
         }
         
-        function closeModal() { document.getElementById('invoiceModal').style.display = 'none'; }
-        
-        // Initialize - LOAD ALL DATA FROM DATABASE
+        // INITIALIZE - LOAD ALL DATA
         async function init() {
             await loadClients();
             await loadInvoices();
