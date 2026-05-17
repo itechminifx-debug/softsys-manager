@@ -33,71 +33,6 @@
         .badge-paid { background: #d1fae5; color: #065f46; }
         .badge-unpaid { background: #fee2e2; color: #991b1b; }
         
-        /* Print Invoice Styles */
-        .invoice-print {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            font-family: 'Times New Roman', serif;
-        }
-        .invoice-header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #6366f1;
-        }
-        .invoice-header h1 {
-            font-size: 32px;
-            color: #6366f1;
-        }
-        .invoice-header p {
-            color: #64748b;
-        }
-        .invoice-details {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-        }
-        .invoice-bill-to h4, .invoice-info h4 {
-            margin-bottom: 10px;
-            color: #1e293b;
-        }
-        .invoice-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        .invoice-table th {
-            background: #f8fafc;
-            padding: 10px;
-            text-align: left;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        .invoice-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .invoice-total {
-            text-align: right;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-        .invoice-footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            font-size: 12px;
-            color: #64748b;
-        }
-        @media print {
-            body * { visibility: hidden; }
-            .invoice-print, .invoice-print * { visibility: visible; }
-            .invoice-print { position: absolute; top: 0; left: 0; width: 100%; }
-            .no-print { display: none; }
-        }
         @media (max-width: 768px) { .header { flex-direction: column; text-align: center; } table { font-size: 12px; } }
     </style>
 </head>
@@ -120,9 +55,6 @@
         </div>
     </div>
     
-    <!-- Hidden Invoice Print Template -->
-    <div id="invoicePrintTemplate" style="display: none;"></div>
-    
     <div id="invoiceModal" class="modal">
         <div class="modal-content">
             <h3 id="modalTitle">Create Invoice</h3>
@@ -140,6 +72,14 @@
     <script>
         let invoices = [];
         let clients = [];
+        
+        // ========== UPDATE YOUR COMPANY DETAILS HERE ==========
+        const COMPANY_NAME = "SoftSys Solutions";
+        const COMPANY_ADDRESS = "123 Business Street, Accra - Ghana";
+        const COMPANY_EMAIL = "info@softsys.com";
+        const COMPANY_PHONE = "+233 XX XXX XXXX";
+        const COMPANY_WEBSITE = "www.softsys.com";
+        // ======================================================
         
         async function loadClients() {
             const res = await fetch(API_URL + '/api/clients');
@@ -165,7 +105,7 @@
                 container.innerHTML = '<p style="text-align:center; padding:40px;">No invoices yet. Click "Create Invoice" to get started.</p>';
                 return;
             }
-            let html = '</td><thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table><thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Actions</th></td></thead><tbody>';
             invoices.forEach(i => {
                 const client = clients.find(c => c.id == i.client_id);
                 html += `
@@ -203,169 +143,167 @@
             loadClientSelect();
             document.getElementById('invoiceModal').style.display = 'flex';
         }
-        // PRINT INVOICE FUNCTION - WITH YOUR COMPANY DETAILS
-function printInvoice(id) {
-    const invoice = invoices.find(i => i.id === id);
-    const client = clients.find(c => c.id == invoice.client_id);
-    
-    if (!invoice || !client) return;
-    
-    // ========== UPDATE YOUR COMPANY DETAILS HERE ==========
-    const companyName = "iTECH-SOFT SYSTEMS SOLUTIONS";
-    const companyAddress = "Oti Region - Jasikan";
-    const companyEmail = "itechminifx@gmail.com";
-    const companyPhone = "+233 (0)591906224";
-    const companyWebsite = "www.softsys.com";
-    // ======================================================
-    
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString();
-    
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Invoice ${invoice.invoice_number}</title>
-            <style>
-                body {
-                    font-family: 'Times New Roman', serif;
-                    margin: 0;
-                    padding: 40px;
-                }
-                .invoice-container {
-                    max-width: 800px;
-                    margin: 0 auto;
-                    background: white;
-                }
-                .invoice-header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 2px solid #6366f1;
-                }
-                .invoice-header h1 {
-                    font-size: 32px;
-                    color: #6366f1;
-                    margin-bottom: 10px;
-                }
-                .invoice-header .company-details {
-                    color: #64748b;
-                    font-size: 14px;
-                    line-height: 1.5;
-                }
-                .invoice-details {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 30px;
-                }
-                .invoice-bill-to h4, .invoice-info h4 {
-                    margin-bottom: 10px;
-                    color: #1e293b;
-                }
-                .invoice-bill-to p, .invoice-info p {
-                    margin: 5px 0;
-                    color: #475569;
-                }
-                .invoice-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 20px 0;
-                }
-                .invoice-table th {
-                    background: #f8fafc;
-                    padding: 12px;
-                    text-align: left;
-                    border-bottom: 2px solid #e2e8f0;
-                }
-                .invoice-table td {
-                    padding: 12px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-                .invoice-total {
-                    text-align: right;
-                    margin-top: 20px;
-                    padding-top: 20px;
-                    border-top: 2px solid #e2e8f0;
-                }
-                .invoice-total h3 {
-                    color: #1e293b;
-                }
-                .invoice-footer {
-                    text-align: center;
-                    margin-top: 40px;
-                    padding-top: 20px;
-                    border-top: 1px solid #e2e8f0;
-                    font-size: 12px;
-                    color: #64748b;
-                }
-                @media print {
-                    body { padding: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="invoice-container">
-                <div class="invoice-header">
-                    <h1>${companyName}</h1>
-                    <div class="company-details">
-                        <p>${companyAddress}</p>
-                        <p>📧 ${companyEmail} | 📞 ${companyPhone} | 🌐 ${companyWebsite}</p>
+        
+        // PRINT INVOICE FUNCTION
+        function printInvoice(id) {
+            const invoice = invoices.find(i => i.id === id);
+            const client = clients.find(c => c.id == invoice.client_id);
+            
+            if (!invoice || !client) return;
+            
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString();
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Invoice ${invoice.invoice_number}</title>
+                    <style>
+                        body {
+                            font-family: 'Times New Roman', serif;
+                            margin: 0;
+                            padding: 40px;
+                        }
+                        .invoice-container {
+                            max-width: 800px;
+                            margin: 0 auto;
+                            background: white;
+                        }
+                        .invoice-header {
+                            text-align: center;
+                            margin-bottom: 30px;
+                            padding-bottom: 20px;
+                            border-bottom: 2px solid #6366f1;
+                        }
+                        .invoice-header h1 {
+                            font-size: 32px;
+                            color: #6366f1;
+                            margin-bottom: 10px;
+                        }
+                        .invoice-header .company-details {
+                            color: #64748b;
+                            font-size: 14px;
+                            line-height: 1.5;
+                        }
+                        .invoice-details {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 30px;
+                        }
+                        .invoice-bill-to h4, .invoice-info h4 {
+                            margin-bottom: 10px;
+                            color: #1e293b;
+                        }
+                        .invoice-bill-to p, .invoice-info p {
+                            margin: 5px 0;
+                            color: #475569;
+                        }
+                        .invoice-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 20px 0;
+                        }
+                        .invoice-table th {
+                            background: #f8fafc;
+                            padding: 12px;
+                            text-align: left;
+                            border-bottom: 2px solid #e2e8f0;
+                        }
+                        .invoice-table td {
+                            padding: 12px;
+                            border-bottom: 1px solid #e2e8f0;
+                        }
+                        .invoice-total {
+                            text-align: right;
+                            margin-top: 20px;
+                            padding-top: 20px;
+                            border-top: 2px solid #e2e8f0;
+                        }
+                        .invoice-total h3 {
+                            color: #1e293b;
+                        }
+                        .invoice-footer {
+                            text-align: center;
+                            margin-top: 40px;
+                            padding-top: 20px;
+                            border-top: 1px solid #e2e8f0;
+                            font-size: 12px;
+                            color: #64748b;
+                        }
+                        @media print {
+                            body { padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="invoice-container">
+                        <div class="invoice-header">
+                            <h1>${iTECH-SOFT SYSTEMS SOLUTIONS}</h1>
+                            <div class="company-details">
+                                <p>${Oti Region - Jasikan}</p>
+                                <p>📧 ${itechminifx@gmail.com} | 📞 ${+233 (0) 591906224} | 🌐 ${www.softsolutions.com}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="invoice-details">
+                            <div class="invoice-bill-to">
+                                <h4>Bill To:</h4>
+                                <p><strong>${client.name}</strong></p>
+                                <p>${client.email || ''}</p>
+                                <p>${client.phone || ''}</p>
+                                <p>${client.address || ''}</p>
+                            </div>
+                            <div class="invoice-info">
+                                <h4>Invoice Details:</h4>
+                                <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
+                                <p><strong>Date:</strong> ${formattedDate}</p>
+                                <p><strong>Due Date:</strong> ${invoice.due_date || 'Upon Receipt'}</p>
+                                <p><strong>Status:</strong> ${invoice.status === 'paid' ? 'PAID' : 'PENDING'}</p>
+                            </div>
+                        </div>
+                        
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Professional Services - ${invoice.invoice_number}</td>
+                                    <td>1</td>
+                                    <td>₵${invoice.amount}</td>
+                                    <td>₵${invoice.amount}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="invoice-total">
+                            <h3>Total Amount: ₵${invoice.amount}</h3>
+                        </div>
+                        
+                        <div class="invoice-footer">
+                            <p>Thank you for your business!</p>
+                            <p>Payment Terms: Please pay within 30 days. For inquiries, contact accounts@softsys.com</p>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="invoice-details">
-                    <div class="invoice-bill-to">
-                        <h4>Bill To:</h4>
-                        <p><strong>${client.name}</strong></p>
-                        <p>${client.email || ''}</p>
-                        <p>${client.phone || ''}</p>
-                        <p>${client.address || ''}</p>
-                    </div>
-                    <div class="invoice-info">
-                        <h4>Invoice Details:</h4>
-                        <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
-                        <p><strong>Date:</strong> ${formattedDate}</p>
-                        <p><strong>Due Date:</strong> ${invoice.due_date || 'Upon Receipt'}</p>
-                        <p><strong>Status:</strong> ${invoice.status === 'paid' ? 'PAID' : 'PENDING'}</p>
-                    </div>
-                </div>
-                
-                <table class="invoice-table">
-                    <thead>
-                        <tr><th>Description</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Professional Services - ${invoice.invoice_number}</span></td>
-                            <td>1</span></td>
-                            <td>₵${invoice.amount}</span></td>
-                            <td>₵${invoice.amount}</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <div class="invoice-total">
-                    <h3>Total Amount: ₵${invoice.amount}</h3>
-                </div>
-                
-                <div class="invoice-footer">
-                    <p>Thank you for your business!</p>
-                    <p>Payment Terms: Please pay within 30 days. For inquiries, contact accounts@softsys.com</p>
-                </div>
-            </div>
-            <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() { window.close(); }, 500);
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    
-    printWindow.document.close();
-}
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            setTimeout(function() { window.close(); }, 500);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+        }
         
         async function markAsPaid(id) {
             if (confirm('Mark this invoice as paid?')) {
